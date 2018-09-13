@@ -23,12 +23,16 @@ linear_model <- function(formula, data) {
   
   #Initiate a model_fit list which has the same class characteristics as lm
   model_fit<-list()
+  
+  #Parameters in model_fit list
+  #Reference: https://www.rdocumentation.org/packages/stats/versions/3.5.1/topics/lm
   model_fit$coefficients <- beta
   model_fit$residuals<- y-X%*%beta
   model_fit$fitted.values<-X%*%beta
-  model_fit$rank <- ncol(X)
+  model_fit$rank <- ncol(X) 
   model_fit$weights <- NULL
-  model_fit$df.residuals <- nrow(X) - ncol(X) 
+  model_fit$df.residuals <- nrow(X) - ncol(X) #n-p
+  model_fit$qr <- qr(X)
   model_fit$call <- call('lm',formula)
   model_fit$terms <- terms(x = formula,data = data)
   model_fit$contrasts <- NULL
@@ -38,8 +42,9 @@ linear_model <- function(formula, data) {
   model_fit$x <- X
   model_fit$model = formula
   model_fit$na.action <- NULL
-  model_fit$qr <- qr(X)
-
+  
+  #Cast the class of model_fit to lm
   class(model_fit)<-"lm"
+  
   return(model_fit)
 }
