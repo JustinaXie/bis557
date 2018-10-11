@@ -6,6 +6,7 @@
 #' @param data a data.frame
 #' @return An lm object
 #' @importFrom stats lm
+#' @importFrom stats terms
 #' @examples
 #' fit <- linear_model(Sepal.Length ~., iris)
 #' summary(fit)
