@@ -14,12 +14,16 @@ output:
 
 ## The ridge_reg function
 
-The ridge regression model is 
+Ridge regression is a technique for analyzing multivariate regression data that suffer from multicollinearity. 
 
 ```{r}
 library(bis557)
 data("ridge_train")
 data("ridge_test")
+```
+
+The function to calculate mean square error of the ridge regression model.
+```{r}
 mse_ridge_residuals <- function(formula,lambda){ 
   #Get X and y from the test dataset
   y_test<- model.frame(formula,ridge_test)[,1]
@@ -27,11 +31,25 @@ mse_ridge_residuals <- function(formula,lambda){
   #Fit the ridge regression model with the train dataset
   fit_ridge<-ridge_reg(formula,lambda,ridge_train)
   betas<-fit_ridge$coef
+  #Calculate the estimated y value
   y_hat<-X_test%*%betas
   #Calculate the mean square error
   mean((y_hat-y_test)^2)
 }
-lambda<-10^seq(-2,5,0.05)
-sds<-sapply(lambda, function(x) mse_ridge_residuals(y ~.-1 ,x))
-plot(log(lambda),sds)
 ```
+
+Plot lambda on a log scale with its corresponding mean square error.
+```{r}
+lambda<-10^(seq(-2,5,0.05))
+mse<-sapply(lambda, function(x) mse_ridge_residuals(y ~. ,x))
+plot(log(lambda),mse)
+```
+
+Find the optimal value of lambda and the corresponding minimum value of mean square error.
+```{r}
+f<-function(x) mse_ridge_residuals(y ~. ,x)
+lambda_optimal<-optimize(f,interval = c(-100,1000000))
+cat("The optimal value of lambda is",lambda_optimal$minimum,"\n")
+cat("The minimum value of mse is",lambda_optimal$objective)
+```
+
