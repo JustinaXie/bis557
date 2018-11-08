@@ -1,0 +1,257 @@
+---
+title: "Homework 3"
+author: "Yuhan Xie"
+date: '`r Sys.Date()`'
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    self_contained: yes
+    toc: yes
+  word_document:
+    toc: yes
+---
+<!--
+%\VignetteEngine{knitr::rmarkdown}
+%\VignetteIndexEntry{The Homework 3 vignette}
+-->
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(bis557)
+```
+
+#Page 117, Problem 7
+```{r}
+#kernel density function
+kernel_epan <- function(x, h = 1) {
+  x <- x/h
+  ran <- as.numeric(abs(x) <= 1)
+  val <- ((3/4)*(1-x^2)*ran)/h
+  return(val)
+}
+
+kernel_density <- function(x, x_new, h) {
+  sapply(x_new, function(v)
+    { w <- kernel_epan(abs(x-v), h=h)
+      f_den <- mean(w)
+      f_den
+    })
+}
+```
+
+```{r}
+set.seed(2018)
+par(mfrow=c(3,1))
+#Visualization
+#bandwidth = 1.5,normal density N(0,1)
+N <- 1000
+x <- rnorm(N)
+x_new <-seq(-5, 5, length.out = N)
+bwidths<-1.5
+f_den<-kernel_density(x,x_new,bwidths)
+plot(x_new, f_den, xlab="x_new", ylab="kernel density", main="Normal Density Plot",type="l",ylim = c(0,0.6),lwd = 2)
+true_den <- dnorm(x_new, 0, 1)
+lines(x_new, true_den, col="green",lwd = 2)
+legend("topright", legend = c("Kernel Density","True Density"), col=c("black", "green"),lty=c(1,1))
+
+#bandwidth = 0.5,normal density N(0,1)
+N <- 1000
+x <- rnorm(N)
+x_new <-seq(-5, 5, length.out = N)
+bwidths<-0.5
+f_den<-kernel_density(x,x_new,bwidths)
+plot(x_new, f_den, xlab="x_new", ylab="kernel density", main="Normal Density",type="l",ylim = c(0,0.6),lwd = 2)
+true_den <- dnorm(x_new, 0, 1)
+lines(x_new, true_den, col="green",lwd = 2)
+legend("topright", legend = c("Kernel Density","True Density"), col=c("black", "green"),lty=c(1,1))
+
+#bandwidth = 0.1,normal density N(0,1)
+N <- 1000
+x <- rnorm(N)
+x_new <-seq(-5, 5, length.out = N)
+bwidths<-0.1
+f_den<-kernel_density(x,x_new,bwidths)
+plot(x_new, f_den, xlab="x_new", ylab="kernel density", main="Normal Density",type="l",ylim = c(0,0.6))
+true_den <- dnorm(x_new, 0, 1)
+lines(x_new, true_den, col="green",lwd = 2)
+legend("topright", legend = c("Kernel Density","True Density"), col=c("black", "green"),lty=c(1,1))
+```
+
+```{r}
+set.seed(2018)
+par(mfrow=c(3,1))
+#bandwidth = 1.5, chi-square density(df=3)
+N <- 1000
+x <- rchisq(N,df=3)
+x_new <-seq(0, 10, length.out = N)
+true_den <- dchisq(x_new,df=3)
+bwidths<-1.5
+f_den<-kernel_density(x,x_new,bwidths)
+plot(x_new, f_den, xlab="x_new", ylab="kernel density", main="Chi-square Density",type="l",ylim = c(0,0.3),lwd = 2)
+lines(x_new, true_den, col="purple",lwd = 2)
+legend("topright", legend = c("Kernel Density","True Density"), col=c("black", "purple"),lty=c(1,1))
+
+#bandwidth = 0.5, chi-square density(df=3)
+N <- 1000
+x <- rchisq(N,df=3)
+x_new <-seq(0, 10, length.out = N)
+true_den <- dchisq(x_new,df=3)
+bwidths<-0.5
+f_den<-kernel_density(x,x_new,bwidths)
+plot(x_new, f_den, xlab="x_new", ylab="kernel density", main="Chi-square Density",type="l",ylim = c(0,0.3),lwd = 2)
+lines(x_new, true_den, col="purple",lwd = 2)
+legend("topright", legend = c("Kernel Density","True Density"), col=c("black", "purple"),lty=c(1,1))
+
+#bandwidth = 0.1, chi-square density(df=3)
+N <- 1000
+x <- rchisq(N,df=3)
+x_new <-seq(0, 10, length.out = N)
+true_den <- dchisq(x_new,df=3)
+bwidths<-0.1
+f_den<-kernel_density(x,x_new,bwidths)
+plot(x_new, f_den, xlab="x_new", ylab="kernel density", main="Chi-square Density Plot",type="l",ylim = c(0,0.3),lwd = 2)
+lines(x_new, true_den, col="purple",lwd = 2)
+legend("topright", legend = c("Kernel Density","True Density"), col=c("black", "purple"),lty=c(1,1))
+```
+
+```{r,eval=FALSE}
+#a sequence of bandwidth
+set.seed(2018)
+N <- 1000
+x <- rnorm(N)
+x_new <-seq(-10, 10, length.out = N)
+y_new <- dnorm(x_new)
+mses<-rep(0,N)
+f_den<-rep(0,N)
+bwidths<-seq(0.1, 5, length.out = N)
+for (k in 1:N) {
+  f_den<-kernel_density(x = x,x_new = x_new,h=bwidths[k])
+  mses[k]<-mean((f_den-y_new)^2)
+}
+best_h<-which.min(mses)
+sprintf("mse: %01.09f h= %01.04f",mses[best_h],bwidths[best_h])
+plot(bwidths,mses,main = "MSEs Vs Bandwidths")
+```
+
+
+#Page 200,Problem 3
+$f:\mathbb{R}^p\rightarrow \mathbb{R},g:\mathbb{R}^p\rightarrow \mathbb{R}$
+For any values $b_1,b_2\in \mathbb{R}^p$ and quantity $t\in[0,1]$
+Denote:
+$$
+(f+g)(x)=f(x)+g(x)
+$$
+\begin{align*}
+(f+g)(tb_1+(1-t)b_2)&=f(tb_1+(1-t)b_2)+g(tb_1+(1-t)b_2)\\
+&\leq tf(b_1)+(1-t)f(b_2)+tg(b_1)+(1-t)g(b_2)\\
+&=t(f+g)(b_1)+(1-t)(f+g)(b_2)
+\end{align*}
+
+Thus, $f+g$ is a convex funciton.
+
+#Page 200,Problem 4
+For any values $b_1,b_2\in \mathbb{R}^p$ and quantity $t\in[0,1]$
+\begin{align*}
+|tb_1+(1-t)b_2|&\leq|tb_1|+|(1-t)b_2|\\
+&\leq t|b_1|+(1-t)|b_2|
+\end{align*}
+Thus, the absolute value function is convex.
+
+$$
+||v||_1=\sum_j|v_j|
+$$
+where $v_j$ is the jth element in $v$.
+As $|v_j|$ is convex, from Problem 3 we know that the sum of convex function is also convex. Thus, the $l_1-norm$ is also convex.
+
+#Page 200,Problem 5
+$l_2-norm$
+$$
+||v||_2=\sum_jv_j^2
+$$
+where $v_j$ is the jth element in $v$.
+
+For any values $b_1,b_2\in \mathbb{R}^p$ and quantity $t\in[0,1]$
+$$
+t^2b_1^2+(1-t)^2b_2^2+2t(1-t)b_1b_2-tb_1^2-(1-t)b_2^2=t(t-1)(b_1-b_2)^2\leq0
+$$
+$$
+(tb_1+(1-t)b_2)^2=t^2b_1^2+(1-t)^2b_2^2+2t(1-t)b_1b_2\leq tb_1^2+(1-t)b_2^2
+$$
+
+$f:\mathbb{R}^p\rightarrow \mathbb{R}$, f is a convex function.
+For any $a>0$, 
+$$
+af(tb_1+(1-t)b_2)\leq taf(b_1)+(1-t)af(b_2)
+$$
+Thus, $af$ is convex.
+
+Thus, the square function is a convex function. Then, the sum of square functions ($l_2-norm$) is also convex. As elastic net objective function is the sum of $l_1$ norm and $l_2$ norms, it is convex.
+
+#Page 200,Problem 6
+We create the check KKT function with formula from (7.37) on page 188
+$$
+\frac{1}{n}\sum_{i=1}^nx_{il}(y_i-\sum_{j=1}^px_{ij}\widehat{b_j})=\lambda s_l
+$$
+$$
+s_j\in\left\{\begin{matrix}
+ 1& if\quad \widehat{b}_j>0\\ 
+ -1& if\quad \widehat{b}_j<0\\ 
+ [-1,1]& if\quad \widehat{b}_j=0
+\end{matrix}\right.
+$$
+
+```{r}
+#The function to test if the KKT condition is violated
+lasso_reg_with_screening<-function(X,y,b,lambda){
+  resids<-y-X%*%b
+  s<-apply(X, 2, function(xj) crossprod(xj,resids))/nrow(X) 
+  s<-round(s/lambda)
+  #round s to make it the same as in cv.glmnet function
+  ret_vec<-rep(TRUE,length(b))
+  for (i in 1:length(b)) {
+    if(b[i]>0)
+     ret_vec[i]<- !(s[i] == 1) 
+    if(b[i]==0)
+     ret_vec[i]<- !(abs(s[i])<=1)
+    if(b[i]<0) 
+        ret_vec[i]<- !(s[i] == -1)}
+  #if KKT condition is violated, we return a vector contains at least one TRUE
+  #if KKT condition is not violated, we return a vector of FALSEs
+  return(ret_vec)
+}
+```
+
+```{r}
+library(glmnet)
+X<-model.matrix(mpg~.-1,data=mtcars[,1:7])
+X<-scale(X)
+y<-mtcars$mpg
+y<-y-mean(y)
+glnnet_fit<-cv.glmnet(X,y,standardize = FALSE,intercept = FALSE)
+lambda<-glnnet_fit$lambda.1se
+lambda
+b<-glnnet_fit$glmnet.fit$beta[,(glnnet_fit$lambda)==lambda]
+b
+#Every beta complies the KKT condition given lambda, as we get a vector of FALSEs
+lasso_reg_with_screening(X,y,b,lambda)
+```
+
+```{r}
+#Manually change the coefficient of 'cyl' to 0
+#Violation of KKT exists as there are Trues
+b[1]<-0
+lasso_reg_with_screening(X,y,b,lambda)
+```
+
+```{r}
+#Manually change the coefficient of 'disp' to be not equal to 0
+#Violation of KKT exists as there are Trues
+b<-glnnet_fit$glmnet.fit$beta
+b<-b[,(glnnet_fit$lambda)==lambda]
+b[2]<-1
+lasso_reg_with_screening(X,y,b,lambda)
+```
