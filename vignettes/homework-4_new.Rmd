@@ -1,0 +1,311 @@
+---
+title: "Homework 4"
+author: "Yuhan Xie"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    self_contained: yes
+    toc: yes
+---
+<!--
+%\VignetteEngine{knitr::rmarkdown}
+%\VignetteIndexEntry{The Homework 3 vignette}
+-->
+1. CASL Number 2 in Exercises 5.8.
+The following is an example that $X^tX$ is well-conditioned, while the Hessian matrix is not due to a extreme vale of $\beta$, namely $p$ is close to 1. To make this vignette work, we set 'eval = F' for the second block. Otherwise, R will throw an error.
+```{r}
+n<-5000
+p<-3
+X<-cbind(1,matrix(rnorm(n*(p-1)),ncol = p-1))
+XtX<-t(X)%*%X
+solve(XtX)
+```
+
+```{r,eval=F}
+beta<-c(10000000,200000000,100000000)
+p<-1/(1+exp(-X%*%beta))
+W<-as.numeric(p*(1-p))
+H<-crossprod(X,diag(W)%*%X)
+solve(H)
+```
+
+2. CASL Number 4 in Exercises 5.8.
+Assume the distribution of y is from the exponential family
+$$
+f(y|\theta)=h(y)\exp\{\eta(\theta)T(y)-A(\theta)\}
+$$
+
+$$
+\begin{aligned}
+l^{pen}(y)&=l(y)-\lambda\|\boldsymbol{\beta}\|_2^2\\
+&=\sum_{i=1}^n\{y_i\mathbf{x}_i^t\boldsymbol{\beta}-A(\mathbf{x}_i^t\boldsymbol{\beta})+\log h(y_i)\}-\lambda\boldsymbol{\beta}^T\boldsymbol{\beta}
+\end{aligned}
+$$
+$$
+\frac{\partial l^{pen}}{\partial\beta}=\frac{\partial l}{\partial \beta} - 2\lambda\boldsymbol{\beta}
+$$
+
+$$
+\bigtriangledown_{\beta}l(y) = -X^t(y-\mathbb{E}y)-2\lambda\boldsymbol{\beta}
+$$
+
+$$
+\frac{\partial^2l^{pen}}{\partial\beta\partial\beta^T}=\frac{\partial^2l}{\partial\beta\partial\beta^T}-2\lambda I_{p}
+$$
+
+$$
+H(l)=-X^t\text{diag}(Var(y^{(k)})X-2\lambda I_{p}
+$$
+
+$$
+\begin{aligned}
+\beta^{(k+1)}&=\beta^{(k)}-H^{-1}(l)(\beta^{(k)})\bigtriangledown_{\beta}l(y)(\beta^{(k)})\\
+&=\beta^{(k)}+[X^t\text{diag}(Var(y^{(k)}))X+2\lambda I_{p}]^{-1}(X^t(y-\mathbb{E}y^{(k)})-2\lambda\beta)\\
+&=V^{-1}V\beta^{(k)}-2\lambda V^{-1}\beta^{(k)}+V^{-1}X^tWW^{-1}(y-\mathbb{E}y^{(k)})\\
+&=V^{-1}[X^tWX+2\lambda I_{p}-2\lambda I_p]\beta^{(k)}+V^{-1}X^tWW^{-1}(y-\mathbb{E}y^{(k)})\\
+&=V^{-1}X^tW\{X\beta^{(k)}+W^{-1}(y-\mathbb{E}y^{(k)})\}\\
+&=[X^tWX+2\lambda I_{p}]^{-1}X^tWz
+\end{aligned}
+$$
+
+$$
+W=\text{diag}(Var(y^{(k)}))
+$$
+
+$$
+V=X^tWX+2\lambda I_{p}
+$$
+
+$$
+z=\{X\beta^{(k)}+W^{-1}(y-\mathbb{E}y^{(k)})\}
+$$
+
+```{r}
+casl_glm_irwls_ridge <-
+  function(X, y, family, maxit=25, tol=1e-10, lambda = 0){
+    beta <- rep(0,ncol(X))
+    for(j in seq_len(maxit))
+    {
+      b_old <- beta
+      eta <- X %*% b_old
+      mu <- family$linkinv(eta)
+      mu_p <- family$mu.eta(eta)
+      z <- eta + (y - mu) / mu_p
+      W <- as.numeric(mu_p^2 / family$variance(mu))
+      XtX <- crossprod(X, diag(W) %*% X) + 2*lambda*diag(1, ncol(X))
+      Xtz <- crossprod(X, W * z)
+      beta <- solve(XtX, Xtz)
+      if(sqrt(crossprod(beta - b_old)) < tol) break
+    }
+    beta 
+  }
+```
+
+
+3. Consider the sparse matrix implementation from class and the sparse add function:
+```{r}
+#Modification has been made to set an S4 class
+sparse_add <- function(e1, e2){
+            if(e1@dims[1] != e2@dims[1] || e1@dims[2] !=e2@dims[2]){
+              stop("An error has occurred, please check your input!")
+            }
+              a <- data.frame(i = e1$i, j = e1$j, x = e1$x)
+              b <- data.frame(i = e2$i, j = e2$j, x = e2$x)
+              c <- merge(a, b, by = c("i", "j"), all = TRUE, suffixes = c("1", "2"))
+              c$x1[is.na(c$x1)] <- 0
+              c$x2[is.na(c$x2)] <- 0
+              c$x <- c$x1 + c$x2
+              c<-c[, c("i", "j", "x")]
+              dims<-e1@dims
+              return(sparse.matrix(c$i,c$j,c$x,dims = dims))
+}
+```
+
+An example of function 'sparse_add'
+```{r}
+setClass("sparse.matrix", contains = "data.frame", slots = c(dims = "vector"))
+
+sparse.matrix<-function(i,j,x,dims=NULL){
+  if(is.null(dims)){
+    dims<-c(max(i),max(j))
+  }
+  df<-data.frame(i = i, j = j , x = x)
+  df<-df[order(df$i),]
+  row.names(df)=NULL
+  a1<-new("sparse.matrix",df,dims = dims)
+  return(a1)
+}
+sm0 <- sparse.matrix(i = c(1, 2), j = c(1, 1), x = c(1, 1))
+sparse_add(sm0,sm0)
+```
+
+-Implement a `sparse_multiply` function that multiplies two sparse matrices.
+```{r}
+#To implement the multiply function, we firstly implement a transpose function
+transpose <- function(a) {
+  dims<-c(a@dims[2],a@dims[1])
+  temp<-a$i 
+  a$i<-a$j
+  a$j<-temp 
+  a<-a[order(a$i),] 
+  row.names(a)=NULL
+  c<-sparse.matrix(a$i,a$j,a$x,dims)
+  return(c)
+}
+
+#Multiplication function
+sparse_multiply <-function(x, y){
+  if(x@dims[2] != y@dims[1]){
+    stop("An error has occurred, please check your input!")
+  }
+  dims<-c(x@dims[1],y@dims[2])
+  a <- data.frame(i = x$i, j = x$j, x = x$x)
+  # index arange of a
+  ida<-numeric(a[nrow(a),1]+1)
+  ida[1]<-1
+  for(ra in 2:nrow(a)){
+      if(a[ra-1,1]!=a[ra,1]){
+        ida[a[ra,1]]<- ra
+      }
+  }
+  ida[length(ida)] <- nrow(a)+1
+  
+  # index range of b
+  y<-transpose(y)
+  b<-data.frame(i = y$i, j = y$j, x = y$x)
+  idb<-numeric(b[nrow(b),1]+1)
+  idb[1]<-1
+  for(rb in 2:nrow(b)){
+    if(b[rb-1,1]!=b[rb,1]){
+      idb[b[rb,1]]<- rb
+    }
+  }
+  idb[length(idb)] <- nrow(b)+1
+  
+  df=data.frame()
+  for(i in 1:(length(ida)-1)){
+    tmp_a=a[ida[i]:(ida[i+1]-1),]
+    for(j in 1:(length(idb)-1)){
+      tmp_b=b[idb[j]:(idb[j+1]-1),]
+      c <- merge(subset(tmp_a,select=c("j","x")), subset(tmp_b,select=c("j","x")), by = c("j"), all = TRUE, suffixes = c("1", "2"))
+      c$x1[is.na(c$x1)] <- 0
+      c$x2[is.na(c$x2)] <- 0
+      row_sum <-  sum(c$x1 * c$x2)
+      if (row_sum != 0)
+      {
+        df <- rbind(df, data.frame(i=ida[i],j=idb[j],x=row_sum))
+      }
+    }
+  }
+  row.names(df)=NULL
+  sm<-sparse.matrix(df$i,df$j,df$x,dims)
+  return(sm)
+}
+```
+
+An example of function 'sparse_multiply'
+```{r}
+sm1 <- sparse.matrix(i = c(1, 2), j = c(1, 1), x = c(3, 1), dims = c(3, 2))
+sm3 <- sparse.matrix(i = rep(1, 3), j = 1:3, x = 1:3, dims = c(2, 3))
+sparse_multiply(sm1,sm3)
+```
+
+-Create a new class `sparse.matrix` that has add `+`, multiply `%*%`, and transpose `t()` methods.
+```{r}
+#Create a new class sparse.matrix
+setClass("sparse.matrix", contains = "data.frame", slots = c(dims = "vector"))
+
+sparse.matrix<-function(i,j,x,dims=NULL){
+  if(is.null(dims)){
+    dims<-c(max(i),max(j))
+  }
+  df<-data.frame(i = i, j = j , x = x)
+  df<-df[order(df$i),]
+  row.names(df)=NULL
+  a1<-new("sparse.matrix",df,dims = dims)
+  return(a1)
+}
+
+#Add transpose to the class
+setMethod("t",signature="sparse.matrix",definition=function(x){
+dims<-c(x@dims[2],x@dims[1])
+temp<-x$i 
+x$i<-x$j
+x$j<-temp 
+x<-x[order(x$i),] 
+row.names(x)=NULL
+c<-sparse.matrix(x$i,x$j,x$x,dims)
+return(c)})
+
+#Add "+" method to the class
+setMethod("+",
+          signature(e1= "sparse.matrix", e2 = "sparse.matrix"),
+          function(e1, e2){
+            if(e1@dims[1] != e2@dims[1] || e1@dims[2] ==e2@dims[2]){
+              stop("An error has occurred, please check your input!")
+            }
+              a <- data.frame(i = e1$i, j = e1$j, x = e1$x)
+              b <- data.frame(i = e2$i, j = e2$j, x = e2$x)
+              c <- merge(a, b, by = c("i", "j"), all = TRUE, suffixes = c("1", "2"))
+              c$x1[is.na(c$x1)] <- 0
+              c$x2[is.na(c$x2)] <- 0
+              c$x <- c$x1 + c$x2
+              c<-c[, c("i", "j", "x")]
+              dims<-e1@dims
+              return(sparse.matrix(c$i,c$j,c$x,dims = dims))
+          })
+
+#Add %*% method to the class
+setMethod("%*%",
+          signature(x= "sparse.matrix", y = "sparse.matrix"),
+          function(x, y){
+            if(x@dims[2] != y@dims[1]){
+              stop("An error has occurred, please check your input!")
+            }
+              dims<-c(x@dims[1],y@dims[2])
+              a <- data.frame(i = x$i, j = x$j, x = x$x)
+                # index arange of a
+  ida<-numeric(a[nrow(a),1]+1)
+  ida[1]<-1
+  for(ra in 2:nrow(a)){
+      if(a[ra-1,1]!=a[ra,1]){
+        ida[a[ra,1]]<- ra
+      }
+  }
+  ida[length(ida)] <- nrow(a)+1
+  
+  # index range of b
+  y<-t(y)
+  b<-data.frame(i = y$i, j = y$j, x = y$x)
+  idb<-numeric(b[nrow(b),1]+1)
+  idb[1]<-1
+  for(rb in 2:nrow(b)){
+    if(b[rb-1,1]!=b[rb,1]){
+      idb[b[rb,1]]<- rb
+    }
+  }
+  idb[length(idb)] <- nrow(b)+1
+  
+  df=data.frame()
+  for(i in 1:(length(ida)-1)){
+    tmp_a=a[ida[i]:(ida[i+1]-1),]
+    for(j in 1:(length(idb)-1)){
+      tmp_b=b[idb[j]:(idb[j+1]-1),]
+      c <- merge(subset(tmp_a,select=c("j","x")), subset(tmp_b,select=c("j","x")), by = c("j"), all = TRUE, suffixes = c("1", "2"))
+      c$x1[is.na(c$x1)] <- 0
+      c$x2[is.na(c$x2)] <- 0
+      row_sum <-  sum(c$x1 * c$x2)
+      if (row_sum != 0)
+      {
+        df <- rbind(df, data.frame(i=ida[i],j=idb[j],x=row_sum))
+      }
+    }
+  }
+  row.names(df)=NULL
+  sm<-sparse.matrix(df$i,df$j,df$x,dims)
+  return(sm)
+})
+```
+
