@@ -14,7 +14,8 @@ output:
 %\VignetteIndexEntry{The Homework 3 vignette}
 -->
 1. CASL Number 2 in Exercises 5.8.
-The following is an example that $X^tX$ is well-conditioned, while the Hessian matrix is not due to a extreme vale of $\beta$, namely $p$ is close to 1. To make this vignette work, we set 'eval = F' for the second block. Otherwise, R will throw an error.
+The following is an example that $X^tX$ is well-conditioned, while the Hessian matrix is not due to a extreme vale of $\beta$, namely $p$ is close to 1.
+To make this vignette work, we set 'eval = F' for the second block. Otherwise, R will throw an error.
 ```{r}
 n<-5000
 p<-3
