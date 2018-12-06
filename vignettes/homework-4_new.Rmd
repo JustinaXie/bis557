@@ -14,8 +14,8 @@ output:
 %\VignetteIndexEntry{The Homework 3 vignette}
 -->
 1. CASL Number 2 in Exercises 5.8.
-The following is an example that $X^tX$ is well-conditioned, while the Hessian matrix is not due to a extreme vale of $\beta$, namely $p$ is close to 1.
-To make this vignette work, we set 'eval = F' for the second block. Otherwise, R will throw an error.
+The following are examples that $X^tX$ is well-conditioned, while the Hessian matrix is not due to extreme vale of $\beta$s.
+To make this vignette work, we set 'eval = F' for the example blocks. Otherwise, R will throw an error.
 ```{r}
 n<-5000
 p<-3
@@ -24,12 +24,24 @@ XtX<-t(X)%*%X
 solve(XtX)
 ```
 
+-the value of $\beta$s are too large, $p$ is close to 1.
 ```{r,eval=F}
 beta<-c(10000000,200000000,100000000)
 p<-1/(1+exp(-X%*%beta))
 W<-as.numeric(p*(1-p))
 H<-crossprod(X,diag(W)%*%X)
 solve(H)
+#Error in solve.default(H)
+```
+
+-one of the value of $\beta$s is too large
+```{r,eval=F}
+beta<-c(0.2,1000000,0.01)
+p<-1/(1+exp(-X%*%beta))
+W<-as.numeric(p*(1-p))
+H<-crossprod(X,diag(W)%*%X)
+solve(H)
+#Error in solve.default(H)
 ```
 
 2. CASL Number 4 in Exercises 5.8.
