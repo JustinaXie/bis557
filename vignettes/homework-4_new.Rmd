@@ -48,7 +48,7 @@ $$
 $$
 
 $$
-\bigtriangledown_{\beta}l(y) = -X^t(y-\mathbb{E}y)-2\lambda\boldsymbol{\beta}
+\bigtriangledown_{\beta}l(y) = X^t(y-\mathbb{E}y)-2\lambda\boldsymbol{\beta}
 $$
 
 $$
