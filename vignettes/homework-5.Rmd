@@ -290,10 +290,12 @@ predict.train <- predict_classes(model, x_train)
 predict.test <- predict_classes(model, x_test)
 
 # Output metrics
-cat('Train:', predict.train==emnist_train[,1], '\n')
-cat('Test:', predict.test==emnist_test[,1], '\n')
+cat('Train:', predict.train==(emnist_train[,1]-1), '\n')
+#0.9235239
+cat('Test:', predict.test==(emnist_test[,1]-1), '\n')
+#0.9029663
 ```
-Unfortunately, after adjusting drop-out rate to 0.25 and kernel size to c(5,5), I did not get a result better than the original parameters in the book. Specific values of accuracy and loss in each epoch can be found in picture 'prob2-prediction' in the vignette folder. I believe a good combination of drop-out rate and kernel size can help improve the prediction accuracy, so we can do more experiments with better computers. 
+After adjusting drop-out rate from 0.5 to 0.25 and kernel size from c(3,3) to c(5,5), the prediction accuracy on the train set improves a little. But unfortunately, the prediction accuracy on the test set is not better than the original parameters in book CASL. Specific values of accuracy and loss in each epoch can be found in picture 'prob2-prediction' in the vignette folder. I think a better combination of drop-out rate and kernel size can help improve the prediction accuracy on the test set, so we can do more experiments with better computers. 
 ![prediction results](prob2-prediction.png)
 
 #Problem 3
